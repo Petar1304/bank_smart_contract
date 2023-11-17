@@ -9,7 +9,8 @@ async function main() {
 
   const token = await ethers.deployContract("Token");
   await token.waitForDeployment();
- 
+
+  // await token.approve(msg.sender());
   await token.mint(address1, ethers.parseEther("100"));
 
   const bank = await ethers.deployContract("Bank", [T]);
