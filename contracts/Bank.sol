@@ -3,23 +3,21 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "hardhat/console.sol";
 
+/**
+ * @title ERC20 Bank smart contract for trace labs 
+ * @author Petar Kovacevic
+ */
 contract Bank is  Ownable {
 
-    IERC20 token;
-
-    uint256 R;
+    // global variables
+    IERC20 public token;
     uint256 public R1;
     uint256 public R2;
     uint256 public R3;
-    // check if it is cheaper to store T2, T3, T4 separately rather then multiplying each time
-    uint256 T;
-    uint256 t0;
-
-    // uint256 rewardPoolTotal;
-
-    uint256 totalStake;
+    uint256 public T;
+    uint256 public t0;
+    uint256 private totalStake;
 
     mapping(address => uint256) staked; // mapping addresses to amounts staked (time of the deposit is not imported)
 
@@ -27,23 +25,23 @@ contract Bank is  Ownable {
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
 
-    // TODO: fix approval mechanism
     constructor(address _token, uint256 _rewards, uint256 _T) Ownable(msg.sender)  {
-        // require(msg.value > 0, "Error: No Tokens deposited")
         token = IERC20(_token);
         t0 = block.timestamp;
         T = _T;
-        R = _rewards;
-        _splitRewards(_rewards);
-        // bool success = token.transferFrom(owner(), address(this), _rewards);
-        // require(success, "Error: Initial deposit failed");
+        R1 = (20 * _rewards) / 100;
+        R2 = (30 * _rewards) / 100;
+        R3 = (50 * _rewards) / 100;
     }
 
-    // deposit tokens on deployment
+    /**
+     * @dev Deposit function used to deposit ERC20 tokens on smart contract
+     *      tokens can be deposited only until t0 + T
+     * @notice ERC20 token transfer should be approved before calling this function
+     * @param _amount uint256 -> amount of tokens deposited
+     */
     function deposit(uint256 _amount) external {
-        // do the checks
         require(block.timestamp <= t0 + T, "Error: deposit period elapsed");
-        // require(token.balanceOf((address(this))) == (totalStake + rewardPoolTotal + _amount), "Error: not enough tokens supplied"); // do it with appoval and transfer from
         require(token.allowance(msg.sender, address(this)) >= _amount, "Error: amount is bigger then allowance");
 
         totalStake += _amount;
@@ -55,6 +53,9 @@ contract Bank is  Ownable {
         emit Deposit(msg.sender, _amount); 
     }
 
+    /**
+     * @dev Function used to withdraw staked ERC20 tokens from contract as well as rewards which are calculated according to contract specification
+     */
     function withdraw() external {
         require(block.timestamp >= t0 + 2 * T, "Error: you are not able to withdraw tokens until lock period elapses");
         require(staked[msg.sender] > 0, "Error: no tokens staked");
@@ -71,24 +72,27 @@ contract Bank is  Ownable {
         emit Withdraw(msg.sender, reward + staked[msg.sender]);
     }
 
-    // TODO: fix this
+    /**
+     * @dev Function used by contract owner to withdraw whats left in bank after 4T passed and all staked tokens are withdrawn
+     */
     function bankWithdrawal() external onlyOwner {
-        require(block.timestamp >= 4*T + t0, "Error: not enough time passed");
+        require(block.timestamp >= t0 + 4 * T, "Error: not enough time passed");
         require(totalStake == 0, "Error: not all staked tokens are withdrawn");
-
         require((R1 + R2 + R3) > 0, "Error: no tokens remaining");
         bool success = token.transfer(owner(), R1 + R2 + R3);
         require(success, "Error: token transfer failed");
     }
 
+    /**
+     * @dev Internal Function that calculates how much rewards user earned depending on time of the withdrawal
+     * @param _staked uint256 -> amount of tokens staked by the user
+     */
     function _calculateRewards(uint256 _staked) internal returns(uint256) {
         require(_staked > 0, "Error: no tokens staked");
         uint256 reward;
 
-        // time checks
         if (block.timestamp < t0 + 3 * T) {
             reward = (_staked * R1) / totalStake;
-            R -= reward;
             R1 -= reward;
             return reward;
         }
@@ -98,7 +102,6 @@ contract Bank is  Ownable {
             reward = rewardR1 + rewardR2;
             R1 -= rewardR1;
             R2 -= rewardR2;
-            R -= reward;
             return reward;
         }
         else if (block.timestamp >= t0 + 4 * T) {
@@ -109,18 +112,10 @@ contract Bank is  Ownable {
             R1 -= rewardR1;
             R2 -= rewardR2;
             R3 -= rewardR3;
-            R -= reward;
             return reward;
         }
         else {
             return 0;
         }
-    }
-
-    // try this without separate function and measure gas
-    function _splitRewards(uint256 _rewards) internal {
-        R1 = (20 * _rewards) / 100;
-        R2 = (30 * _rewards) / 100;
-        R3 = (50 * _rewards) / 100;
     }
 }

@@ -2,29 +2,27 @@ import { ethers } from "hardhat";
 
 async function main() {
 
-  const [address1, address2] = await ethers.getSigners();
+  const [address1] = await ethers.getSigners();
 
   const initalDeposit = ethers.parseEther("1000");
-  const T = 100; // in seconds
+  const T = 10; // in seconds
 
   const token = await ethers.deployContract("Token");
   await token.waitForDeployment();
 
-  // await token.approve(msg.sender());
   await token.mint(address1, initalDeposit);
 
-  const bank = await ethers.deployContract("Bank", [T]);
+  const bank = await ethers.deployContract("Bank", [token.target, initalDeposit, T]);
 
   await bank.waitForDeployment();
 
   // deposit tokens for rewards
-  // approve tokens for rewards
   await token.transfer(bank.target, initalDeposit);
 
   console.log(
     `Bank with ${ethers.formatEther(
       initalDeposit
-    )}ETH and time constant ${T} deployed to ${bank.target}`
+    )} ERC20 tokens and time constant ${T} deployed to ${bank.target}`
   );
 }
 
