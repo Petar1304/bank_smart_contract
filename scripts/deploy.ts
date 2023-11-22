@@ -4,20 +4,21 @@ async function main() {
 
   const [address1, address2] = await ethers.getSigners();
 
-  const initalDeposit = ethers.parseEther("0.001");
-  const T = 100;
+  const initalDeposit = ethers.parseEther("1000");
+  const T = 100; // in seconds
 
   const token = await ethers.deployContract("Token");
   await token.waitForDeployment();
 
   // await token.approve(msg.sender());
-  await token.mint(address1, ethers.parseEther("100"));
+  await token.mint(address1, initalDeposit);
 
   const bank = await ethers.deployContract("Bank", [T]);
 
   await bank.waitForDeployment();
 
   // deposit tokens for rewards
+  // approve tokens for rewards
   await token.transfer(bank.target, initalDeposit);
 
   console.log(
