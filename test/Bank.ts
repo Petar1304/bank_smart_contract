@@ -102,7 +102,6 @@ describe("Bank", function () {
       await bank.bankWithdrawal();
       
       expect(ethers.formatEther(await token.balanceOf(user1.address))).to.equal('1540.0'); // user1 is bank owner
- 
     });
   });
 });
