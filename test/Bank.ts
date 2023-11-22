@@ -174,7 +174,7 @@ describe("Bank", function () {
       await token.approve(bank.target, ethers.parseEther("1000")); 
 
       await sleep(20000);
-      await expect(bank.deploy(ethers.parseEther("1000"))).to.be.revertedWith("Error: deposit period elapsed");
+      await expect(bank.deposit(ethers.parseEther("1000"))).to.be.revertedWith("Error: deposit period elapsed");
     });
   });
 });
